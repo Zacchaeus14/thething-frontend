@@ -98,6 +98,8 @@ export default {
           });
         });
         state.messages = messages;
+				setTimeout(function () {window.scrollTo(0, document.body.scrollHeight);}, 10);
+				// scroll to the end upon new message
       });
     });
     return {
