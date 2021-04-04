@@ -65,6 +65,12 @@ export default {
       }
     }
     const Logout = () => {
+			const messagesRef = db.database().ref("messages");
+			var onChildrenAdded = messagesRef.orderByChild("username").equalTo(state.username)
+			.on("child_added", function(snapshot) {messagesRef.child(snapshot.key).remove();});
+			// remove msg from this user when logout
+			messagesRef.orderByChild("username").equalTo(state.username)
+			.off("child_added", onChildrenAdded);
       state.username = "";
     }
     const SendMessage = () => {
@@ -119,7 +125,7 @@ export default {
 	display: flex;
 	justify-content: center;
 	min-height: 100vh;
-	background-color: #de354c;
+	background-color: #283747;
 	
 	&.login {
 		align-items: center;
@@ -130,7 +136,7 @@ export default {
 			
 			.form-inner {
 				display: block;
-				background-color: #283747;
+				background-color: #de354c;
 				padding: 50px 15px;
 				border-radius: 16px;
 				box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
@@ -157,7 +163,7 @@ export default {
 					border-radius: 8px;
 					margin-bottom: 15px;
 					
-					color: #3c1874;
+					color: #000;
 					font-size: 18px;
 					box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
 					background-color: #F3F3F3;
@@ -198,29 +204,6 @@ export default {
 	}
 	&.chat {
 		flex-direction: column;
-		header {
-			position: relative;
-			display: block;
-			width: 100%;
-			padding: 50px 30px 10px;
-			.logout {
-				position: absolute;
-				top: 15px;
-				right: 15px;
-				appearance: none;
-				border: none;
-				outline: none;
-				background: none;
-				
-				color: #FFF;
-				font-size: 18px;
-				margin-bottom: 10px;
-				text-align: right;
-			}
-			h1 {
-				color: #FFF;
-			}
-		}
 		.chat-box {
 			border-radius: 24px 24px 0px 0px;
 			background-color: #f3f3f3;
@@ -263,6 +246,34 @@ export default {
 						}
 					}
 				}
+			}
+		}
+		header {
+			position: sticky;
+			top: 0px;
+			display: block;
+			width: 100%;
+			padding: 50px 30px 10px;
+			.logout {
+				position: absolute;
+				top: 15px;
+				right: 15px;
+				appearance: none;
+				border: none;
+				// outline: none;
+				// background: none;
+				padding: 15px 32px;
+				text-align: center;
+				text-decoration: none;
+				background-color: #de354c;
+				color: #FFF;
+				font-size: 18px;
+				margin-bottom: 10px;
+				text-align: right;
+				border-radius: 8px;
+			}
+			h1 {
+				color: #FFF;
 			}
 		}
 		footer {
