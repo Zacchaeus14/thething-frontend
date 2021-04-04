@@ -262,7 +262,7 @@ export default {
 				border: none;
 				// outline: none;
 				// background: none;
-				padding: 15px 32px;
+				padding: 10px 20px;
 				text-align: center;
 				text-decoration: none;
 				background-color: #de354c;
@@ -271,6 +271,7 @@ export default {
 				margin-bottom: 10px;
 				text-align: right;
 				border-radius: 8px;
+				font-weight: 700;
 			}
 			h1 {
 				color: #FFF;
