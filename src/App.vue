@@ -1,4 +1,6 @@
 <template>
+  <peercomp v-show="state.peer_on" :state="state" @peerMenu_exit="peerMenu_exit"></peercomp>
+
   <div class="view login" v-if="state.username === '' || state.username === null">
     <form class="login-form" @submit.prevent="Login">
       <div class="form-inner">
@@ -17,8 +19,9 @@
   
   <div class="view chat" v-else>
     <header>
+      <button class="peerMenu_open" v-show="!state.peer_on" @click="peerMenu_open">Peer Menu</button>
       <button class="logout" @click="Logout">Logout</button>
-      <h1>Welcome to the lobby, {{ state.username }}</h1>
+      <h1>Welcome to the lobby, {{ state.username }}.</h1>
     </header>
     
     <section class="chat-box">
@@ -50,13 +53,32 @@
 <script>
 import { reactive, onMounted, ref } from 'vue';
 import db from './db';
+import peercomp from './peer.vue'
+
 export default {
+  components: {
+    peercomp
+  },
+  methods: {
+    peerMenu_open() {
+        this.state.peer_on = true
+    },
+	peerMenu_exit() {
+		this.state.peer_on = false
+	}
+  },
+  data () {
+      return {
+  
+      }
+  },
   setup () {
     const inputUsername = ref("");
     const inputMessage = ref("");
     const state = reactive({
       username: "",
-      messages: []
+      messages: [],
+      peer_on: false
     });
     const Login = () => {
       if (inputUsername.value != "" || inputUsername.value != null) {
@@ -98,8 +120,7 @@ export default {
           });
         });
         state.messages = messages;
-				setTimeout(function () {window.scrollTo(0, document.body.scrollHeight);}, 10);
-				// scroll to the end upon new message
+		setTimeout(function () {window.scroll(0, document.body.scrollHeight);}, 10);
       });
     });
     return {
@@ -123,6 +144,7 @@ export default {
 	padding: 0;
 	box-sizing: border-box;
 }
+
 .view {
 	display: flex;
 	justify-content: center;
@@ -188,6 +210,9 @@ export default {
 					color: #000;
 					font-size: 18px;
 					font-weight: 700;
+				}
+				input[type="submit"]:hover {
+					background-color: #b4b4b4;
 				}
 				&:focus-within {
 					label {
@@ -264,7 +289,7 @@ export default {
 				border: none;
 				// outline: none;
 				// background: none;
-				padding: 10px 20px;
+				padding: 15px 32px;
 				text-align: center;
 				text-decoration: none;
 				background-color: #de354c;
@@ -273,7 +298,28 @@ export default {
 				margin-bottom: 10px;
 				text-align: right;
 				border-radius: 8px;
-				font-weight: 700;
+			}
+			.logout:hover {
+				background-color: #ff2f4b;
+			}
+			.peerMenu_open {
+				position: absolute;
+				top: 15px;
+				right: 160px;
+				appearance: none;
+				border: none;
+				padding: 15px 32px;
+				text-align: center;
+				text-decoration: none;
+				background-color: #de354c;
+				color: #FFF;
+				font-size: 18px;
+				margin-bottom: 10px;
+				text-align: right;
+				border-radius: 8px;
+			}
+			.peerMenu_open:hover {
+				background-color: #ff2f4b;
 			}
 			h1 {
 				color: #FFF;
@@ -307,6 +353,9 @@ export default {
 						color: #888;
 						transition: 0.4s;
 					}
+				}
+				input[type="submit"]:hover {
+					background-color: #ff2f4b;
 				}
 				
 				input[type="submit"] {
