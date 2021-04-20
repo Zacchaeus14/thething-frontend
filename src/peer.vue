@@ -7,7 +7,29 @@
           <button @click="peerMenu_exit" id=back>Hide Peer Service</button>
       </h1>
     </header>
-    <div class="chat-box">Pending invitations...</div>
+
+	<section class="chat-box">
+      <div v-if="messages.length==0 && confMessages.length==0"> Pending invitations... </div>
+      <div 
+        v-for="message in messages" 
+        :key="message.key" 
+        :class="(message.username == state.username ? 'message current-user' : 'message')">
+        <div class="message-inner">
+          <div class="username">{{ message.username }}</div>
+          <div class="content" @click="peerConn_confirmInvite(message)">{{ message.content }}</div>
+        </div>
+      </div>
+      <div 
+        v-for="message in confMessages" 
+        :key="message.key" 
+        :class="(message.username == state.username ? 'message current-user' : 'message')">
+        <div class="message-inner">
+          <div class="username">{{ message.username }}</div>
+          <div class="content confContent" @click="peerConn_start(message.confirm_id, message.username)">{{ message.content }}</div>
+        </div>
+      </div>
+    </section>
+
     <footer>
         <button v-if="!peerState.id" @click="peerConn_init" id=ready>Connect to Peer Service</button>
         <button v-else @click="peerConn_disconnect" id=disconnect>Disconnect from the Peer Service</button>
@@ -25,8 +47,8 @@
 </template>
 
 <script>
-// const axios = require('axios').default;
 import Peer from 'peerjs';
+const axios = require('axios').default;
 export default {
   name: 'peercomp',
   props: {
@@ -44,9 +66,10 @@ export default {
         })
         let peerState = this.peerState
         this.peerState.me.on('open', function(id) {
-            console.log(id)
             peerState.id = id
         })
+		this.peerConn_checkInvite()
+		this.peerConn_checkConfInvite()
     },
     peerMenu_exit(){
         this.$emit('peerMenu_exit')
@@ -56,17 +79,88 @@ export default {
         this.peerState.me = ''
     },
     peerConn_invite(){
-        console.log(this.inputInvitation, this.peerState.id)
+		let invitation = {
+			target_name: this.inputInvitation,
+			self_name: this.state.username,
+			self_id: this.peerState.id
+			}
         this.inputInvitation = ''
-    }
+		axios.post(this.PEERHOST+'/invite', invitation)
+    },
+	peerConn_checkInvite(){
+		let messages = this.messages
+		let state = this.state
+		axios.post(this.PEERHOST+'/checkInvite', {self_name: this.state.username})
+		.then(function (response) {
+			let res_data = response.data
+			for (let i=0; i<res_data.length; i++){
+				let newMessage = true
+				for (let j=0; j<messages.length; j++){
+					if (res_data[i].self_name == messages[j].username){
+						newMessage = false
+					}
+				}
+				if (newMessage && res_data[i].self_name != state.username){
+					messages.push({
+						username: res_data[i].self_name,
+						sender_id: res_data[i].self_id,
+						content: res_data[i].self_name + " has sent you an invitation. Click to initiate a private connection."
+					})
+				}
+			}
+		})
+		setTimeout(this.peerConn_checkInvite, 5000)
+	},
+	peerConn_confirmInvite(message){
+		let conformation = {
+			sender_id: message.sender_id,
+			sender_name: message.username,
+			confirm_id: this.peerState.id,
+			confirm_name: this.state.username
+		}
+		axios.post(this.PEERHOST+'/confirmInvite', conformation)
+		this.peerConn_start(message.sender_id, message.username)
+    },
+	peerConn_checkConfInvite(){
+		let confMessages = this.confMessages
+		let state = this.state
+		axios.post(this.PEERHOST+'/checkConfInvite', {self_name: this.state.username})
+		.then(function (response) {
+			let res_data = response.data
+			for (let i=0; i<res_data.length; i++){
+				let newMessage = true
+				for (let j=0; j<confMessages.length; j++){
+					if (res_data[i].confirm_name == confMessages[j].username){
+						newMessage = false
+					}
+				}
+				if (newMessage && res_data[i].confirm_name != state.username){
+					confMessages.push({
+						username: res_data[i].confirm_name,
+						confirm_id: res_data[i].confirm_id,
+						content: res_data[i].confirm_name + " has accepted your invitation. Click to enter a private connection."
+					})
+				}
+			}
+		})
+		setTimeout(this.peerConn_checkConfInvite, 5000)
+	},
+	peerConn_start(id, name){
+		let me = this.peerState.me
+		this.peerMenu_exit()
+		this.$emit('peerMenu_startConn', {id: id, name: name, me: me, active: true})
+	}
   },
   data () {
     return {
+      PEERHOST: 'http://the0thing.herokuapp.com:80', // the0thing.herokuapp.com:80 http://localhost:8888
       peerState: {
         id: '',
         me: ''
       },
-      inputInvitation: ''
+      inputInvitation: '',
+      messages: [],
+      confMessages: []
     }
   }
 }
@@ -97,6 +191,11 @@ export default {
 			.message {
 				display: flex;
 				margin-bottom: 15px;
+				user-select: none;
+				-moz-user-select: none;
+				-khtml-user-select: none;
+				-webkit-user-select: none;
+				-o-user-select: none;
 				
 				.message-inner {
 					.username {
@@ -115,6 +214,9 @@ export default {
 						font-size: 18px;
 						line-height: 1.2em;
 						text-align: left;
+						&.confContent {
+							background-color: #00967d;
+						}
 					}
 				}
 				&.current-user {
@@ -176,8 +278,6 @@ export default {
 				top: 10px;
 				appearance: none;
 				border: none;
-				// outline: none;
-				// background: none;
 				padding: 10px 15px;
 				text-align: center;
 				text-decoration: none;
@@ -205,7 +305,7 @@ export default {
 					background: none;
 					display: block;
 					width: 100%;
-					padding: 10px 350px;
+					padding-left: 340px;
 					border-radius: 8px 0px 0px 8px;
 					
 					color: #333;

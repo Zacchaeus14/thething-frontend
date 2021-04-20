@@ -1,17 +1,34 @@
 <template>
-  <peercomp v-show="state.peer_on" :state="state" @peerMenu_exit="peerMenu_exit"></peercomp>
+<splitpanes class="default-theme">
+ <pane :size="left_size" min-size="0" id="left_pane"> <!--v-show="state.peer_on" > -->
+  <div class="peer">
+  <peercomp v-show="state.peer_on" :state="state" @peerMenu_exit="peerMenu_exit" @peerMenu_startConn="peerConn_open"></peercomp>
+  </div>
+</pane>
 
+<pane :size="mid_size" min-size="0" id="mid_pane">
+<splitpanes style="height: 100vh" class="default-theme" horizontal>
+  <pane class="peer" 
+    v-for="active_peer in active_peers" 
+    :key="active_peer.name">
+    <peerconn v-show="active_peer.active" :state="state" :peer_info="active_peer" @peerConn_exit="peerConn_exit"></peerconn>
+  </pane>
+</splitpanes>
+</pane>
+  
+<pane id="right_pane" :size="100-left_size-mid_size" min-size="35">
+<div class="right">
   <div class="view login" v-if="state.username === '' || state.username === null">
     <form class="login-form" @submit.prevent="Login">
       <div class="form-inner">
         <h1>Login to Thething</h1>
         <label for="username">Username</label>
-        <input
-          type="text"
-          v-model="inputUsername"
+        <input 
+          type="text" 
+          v-model="inputUsername" 
           placeholder="Please enter your username..." />
-        <input
-          type="submit"
+        <input 
+          type="submit" 
           value="Login" />
       </div>
     </form>
@@ -23,11 +40,11 @@
       <button class="logout" @click="Logout">Logout</button>
       <h1>Welcome to the lobby, {{ state.username }}.</h1>
     </header>
-
+    
     <section class="chat-box">
-      <div
-        v-for="message in state.messages"
-        :key="message.key"
+      <div 
+        v-for="message in state.messages" 
+        :key="message.key" 
         :class="(message.username == state.username ? 'message current-user' : 'message')">
         <div class="message-inner">
           <div class="username">{{ message.username }}</div>
@@ -38,38 +55,82 @@
 
     <footer>
       <form @submit.prevent="SendMessage">
-        <input
-          type="text"
-          v-model="inputMessage"
+        <input 
+          type="text" 
+          v-model="inputMessage" 
           placeholder="Write a message..." />
-        <input
-          type="submit"
+        <input 
+          type="submit" 
           value="Send" />
       </form>
     </footer>
   </div>
+</div>
+</pane>
+</splitpanes>
 </template>
 
 <script>
 import { reactive, onMounted, ref } from 'vue';
+import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
+
 import db from './db';
 import peercomp from './peer.vue'
+import peerconn from './peerConn.vue'
+
 
 export default {
   components: {
-    peercomp
+    peercomp,
+	peerconn,
+	Splitpanes, 
+	Pane
   },
   methods: {
     peerMenu_open() {
         this.state.peer_on = true
+		this.left_size = 50
     },
 	peerMenu_exit() {
 		this.state.peer_on = false
+		this.left_size = 0
+		if (this.mid_size>0){
+			this.mid_size = 65
+		}
+	},
+	peerConn_open(data) {
+		this.left_size = 0
+		this.mid_size = 65
+		for (let i=0; i<this.active_peers.length; i++){
+			if (this.active_peers[i].name == data.name){
+				this.active_peers[i].active = true
+				return
+			}
+		}
+		this.active_peers.push(data)
+		console.log(this.left_size)
+	},
+	peerConn_exit(name){
+		let ctr = 0
+		for (let i=0; i<this.active_peers.length; i++){
+			if (this.active_peers[i].name == name){
+				this.active_peers[i].active = false
+			}
+			if (this.active_peers[i].active){
+				ctr ++
+			}
+		}
+		if (ctr==0){
+			this.mid_size = 0
+		}
 	}
   },
   data () {
       return {
-
+        active_peers: [],
+		left_size: 0,
+		mid_size: 0
       }
   },
   setup () {
@@ -81,11 +142,10 @@ export default {
       peer_on: false
     });
     const Login = () => {
-        if (inputUsername.value != "" || inputUsername.value != null) {
+      if (inputUsername.value != "" || inputUsername.value != null) {
             const messagesRef = db.database().ref("messages");
             messagesRef.orderByChild("username").equalTo(inputUsername.value).once("value",snapshot => {
                 if (snapshot.exists()){
-                    console.log("exists!");
                     alert("exists!");
                 }
                 else {
@@ -153,20 +213,29 @@ export default {
 	padding: 0;
 	box-sizing: border-box;
 }
+.peer{
+	height: 100vh;
+	overflow-y: scroll;
+}
+
+.right{
+	height: 100vh;
+	overflow-y: scroll;
+}
 
 .view {
 	display: flex;
 	justify-content: center;
 	min-height: 100vh;
 	background-color: #283747;
-
+	
 	&.login {
 		align-items: center;
 		.login-form {
 			display: block;
 			width: 100%;
 			padding: 15px;
-
+			
 			.form-inner {
 				display: block;
 				background-color: #de354c;
@@ -195,7 +264,7 @@ export default {
 					padding: 10px 15px;
 					border-radius: 8px;
 					margin-bottom: 15px;
-
+					
 					color: #000;
 					font-size: 18px;
 					box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
@@ -248,7 +317,7 @@ export default {
 			.message {
 				display: flex;
 				margin-bottom: 15px;
-
+				
 				.message-inner {
 					.username {
 						color: #888;
@@ -352,7 +421,7 @@ export default {
 					width: 100%;
 					padding: 10px 15px;
 					border-radius: 8px 0px 0px 8px;
-
+					
 					color: #333;
 					font-size: 18px;
 					box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
@@ -366,7 +435,7 @@ export default {
 				input[type="submit"]:hover {
 					background-color: #ff2f4b;
 				}
-
+				
 				input[type="submit"] {
 					appearance: none;
 					border: none;
