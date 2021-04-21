@@ -1,5 +1,5 @@
 <template>
-  <div class='view peerconn'>
+  <div class='view peerconn' id=peerconn>
     <header>
       <h1>Your Peer Connection with {{peer_info.name}}, {{state.username}}.  <br>
           <span>Trust me, it's private :/</span>
@@ -17,10 +17,13 @@
           <div class="content">{{ message.content }}</div>
         </div>
       </div>
+      <video id="video_ele" autoplay></video>
     </section>
 
     <footer>
-      <form v-if="messages.length" @submit.prevent="SendMessage">
+      <div v-if="messages.length">
+      <button @click="video_call" id=disconnect_call>Video Call</button>
+      <form  @submit.prevent="SendMessage">
         <input 
           type="text" 
           v-model="inputMessage" 
@@ -29,6 +32,7 @@
           type="submit" 
           value="Send" />
       </form>
+      </div>
       <p v-else>Connecting...</p>
     </footer>
   </div>
@@ -44,10 +48,12 @@ export default {
   },
   methods: {
     SendMessage() {
+		if (this.inputMessage == ''){return}
         let message = {name: this.state.username, message: this.inputMessage}
         let conn = this.conn
         let messages = this.messages
         this.inputMessage = ''
+		this.$emit('peerConn_newMsg',{name: this.peer_info.name, len: messages.length})
         if (this.unsent()){
             conn = this.peer_info.me.connect(this.peer_info.id)
             messages.push({username: message.name, content: message.message})
@@ -77,27 +83,54 @@ export default {
     },
     peerConn_exit(){
         this.$emit('peerConn_exit', this.peer_info.name)
-    }
+    },
+	video_call(){
+		if (!document.getElementById("video_ele").srcObject){
+			navigator.mediaDevices.getUserMedia({video: true, audio: true})
+			.then((stream) => {
+			let newConn = this.peer_info.me.call(this.peer_info.id, stream)
+			this.vidConn.push(newConn)
+			newConn.on('stream', this.renderVideo);
+			newConn.on('close', function(){document.getElementById("video_ele").srcObject = undefined})
+			this.inputMessage = "I have initialised a video call. Allow video input to continue."
+			this.SendMessage()
+			document.getElementById("disconnect_call").innerHTML = "Terminate Video Call"
+        })
+		}
+		else{
+			this.vidConn.pop().close()
+			this.inputMessage = "I have ended the video call."
+			this.SendMessage()
+			document.getElementById("video_ele").srcObject = undefined
+			document.getElementById("disconnect_call").innerHTML = "Video Call"
+		}
+	}
   },
   data () {
     return {
         inputMessage: ''
     }
   },
-  setup(props) {
+  setup(props, {emit}) {
     var conn = reactive(props.peer_info.me.connect(props.peer_info.id))
+	var vidConn = reactive([])
 
     const messages = reactive([]);
     var said_hi = false
+
+	const renderVideo = (stream) => {
+		document.getElementById('video_ele').srcObject = stream
+	}
     
+    // Connect to the active peer
     conn.on('open', () => {
         conn.send({name: props.state.username, message: "Hello. We are connected. Chat way."})
     })
 
-    // Connect to the active peer
+	// Handle incoming chat
     props.peer_info.me.on('connection', (conn_in) => {
     conn_in.on('data', (data) => {
-        console.log(data)
+		emit('peerConn_newMsg', {name: props.peer_info.name, len: messages.length})
         if (data.name == props.peer_info.name){
             messages.push({username: data.name, content: data.message})
         }
@@ -109,12 +142,28 @@ export default {
                 conn.send({name: props.state.username, message: "Hi. We are connected. Chat way."})
             })
         }
+		if (data.message=="I have ended the video call." && document.getElementById("video_ele").srcObject){
+			vidConn.pop().close()
+			document.getElementById("video_ele").srcObject = undefined
+			document.getElementById("disconnect_call").innerHTML = "Video Call"
+		}
     })})
 
+	// Handle incoming video
+	props.peer_info.me.on('call', (call) => {
+		navigator.mediaDevices.getUserMedia({video: true, audio: true})
+			.then((stream) => {
+			vidConn.push(call)
+			call.answer(stream); // Answer the call with an A/V stream.
+			call.on('stream', renderVideo);
+			document.getElementById("disconnect_call").innerHTML = "Terminate Video Call"
+			})})
 
     return {
         conn,
-        messages
+        messages,
+		renderVideo,
+		vidConn
     }
   }
 }
@@ -240,7 +289,7 @@ export default {
             #ready {
 				left: 15px;
 			}
-            #disconnect {
+            #disconnect_call {
                 top: 30px;
 				border-radius: 8px 0px 0px 8px;
             }

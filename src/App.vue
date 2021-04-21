@@ -10,14 +10,15 @@
 <splitpanes style="height: 100vh" class="default-theme" horizontal>
   <pane class="peer" 
     v-for="active_peer in active_peers" 
-    :key="active_peer.name">
-    <peerconn v-show="active_peer.active" :state="state" :peer_info="active_peer" @peerConn_exit="peerConn_exit"></peerconn>
+    :key="active_peer.name" :id="active_peer.name">
+    <peerconn v-show="active_peer.active" :state="state" :peer_info="active_peer" @peerConn_exit="peerConn_exit" 
+		@peerConn_newMsg="peerConn_newMsg"></peerconn>
   </pane>
 </splitpanes>
 </pane>
   
 <pane id="right_pane" :size="100-left_size-mid_size" min-size="35">
-<div class="right">
+<div class="right" id=right>
   <div class="view login" v-if="state.username === '' || state.username === null">
     <form class="login-form" @submit.prevent="Login">
       <div class="form-inner">
@@ -109,7 +110,6 @@ export default {
 			}
 		}
 		this.active_peers.push(data)
-		console.log(this.left_size)
 	},
 	peerConn_exit(name){
 		let ctr = 0
@@ -123,6 +123,11 @@ export default {
 		}
 		if (ctr==0){
 			this.mid_size = 0
+		}
+	},
+	peerConn_newMsg(info){
+		if (info.len>9){
+		setTimeout(function () {document.getElementById(info.name).scroll(0, document.getElementById(info.name).scrollHeight);}, 10);
 		}
 	}
   },
@@ -175,6 +180,7 @@ export default {
       }
       messagesRef.push(message);
       inputMessage.value = "";
+		setTimeout(function () {document.getElementById('right').scroll(0, document.getElementById('right').scrollHeight);}, 10);
     }
     onMounted(() => {
       const messagesRef = db.database().ref("messages");
@@ -189,7 +195,7 @@ export default {
           });
         });
         state.messages = messages;
-		setTimeout(function () {window.scroll(0, document.body.scrollHeight);}, 10);
+		setTimeout(function () {document.getElementById('right').scroll(0, document.getElementById('right').scrollHeight);}, 10);
       });
     });
     return {

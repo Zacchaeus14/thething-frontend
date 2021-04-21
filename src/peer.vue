@@ -79,6 +79,7 @@ export default {
         this.peerState.me = ''
     },
     peerConn_invite(){
+		if (this.inputInvitation == ''){return}
 		let invitation = {
 			target_name: this.inputInvitation,
 			self_name: this.state.username,
