@@ -1,6 +1,6 @@
-# Thething - A P2P Chat System Built with Vue.js
+# Thething - A Web-Based P2P Chat System
 
-[LIVE DEMO](https://zacchaeus14.github.io/thething-frontend-build/)
+[LIVE DEMO](http://the0thing.herokuapp.com/)
 
 * Built code is at https://github.com/Zacchaeus14/thething-frontend-build
 * The broker lobby is backended on [Firebase](https://firebase.google.com/)
